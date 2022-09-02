@@ -34,9 +34,9 @@ port = os.environ["PORT"]
 
 # initialize FastAPI
 app = FastAPI(
-    title="language model",
-    description="Generate text from a prompt. \n"
-                "Built with love by [NLRC 510](https://www.510.global/).",
+    title="text-generation-app",
+    description="Text-to-Text generation. \n"
+                "Built with love by [NLRC 510](https://www.510.global/). See [the project on GitHub](https://github.com/rodekruis/text-generation-app).",
     version="0.0.1",
     license_info={
         "name": "AGPL-3.0 license",
@@ -47,7 +47,7 @@ app = FastAPI(
 
 @app.get("/")
 def index():
-    return {"data": "Welcome to language-model-app!"}
+    return {"data": "Welcome to text-generation-app!"}
 
 
 @app.post("/generate/")
