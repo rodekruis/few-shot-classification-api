@@ -23,5 +23,9 @@ RUN pipenv install --system --deploy --ignore-pipfile
 ENV PORT=8000
 EXPOSE 8000
 
+# define the model that will be loaded
+ENV MODEL_ORG="facebook"
+ENV MODEL_NAME="opt-1.3b"
+
 # execute the command python main.py (in the WORKDIR) to start the app
 CMD ["python3", "main.py"]

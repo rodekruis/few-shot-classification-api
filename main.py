@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Initialize model
-modelname = "facebook/opt-13b"
+modelname = os.environ["MODEL_ORG"] + "/" + os.environ["MODEL_NAME"]
 tokenizer = GPT2Tokenizer.from_pretrained(modelname)
 model = OPTForCausalLM.from_pretrained(modelname)
 
@@ -25,6 +25,7 @@ class ModelName(str, Enum):
 
 class GeneratePayload(BaseModel):
     text: str
+    length: Union[int, None] = 10
     model: str = ModelName.modelname
 
 
@@ -54,11 +55,8 @@ async def generate_text(payload: GeneratePayload):
     text = ""
     try:
         inputs = tokenizer(payload.text, return_tensors="pt")
-        print(inputs)
-        generate_ids = model.generate(inputs.input_ids, max_length=30)
-        print(generate_ids)
+        generate_ids = model.generate(inputs.input_ids, max_length=payload.length)
         output = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
-        print(output)
         if len(output) > 0:
             text = output[0].replace(payload.text, "")
     except:
