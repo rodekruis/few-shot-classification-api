@@ -10,7 +10,6 @@ RUN apt-get -y install python3-pip
 # copy files to the /app folder in the container
 COPY ./main.py /app/main.py
 COPY ./Pipfile /app/Pipfile
-COPY ./Pipfile.lock /app/Pipfile.lock
 
 # set the working directory in the container to be /app
 WORKDIR /app
