@@ -103,6 +103,7 @@ async def train_model(payload: TrainPayload):
             output['evaluation'] = metrics
 
         # if model already exists, delete old version
+        os.makedirs("./models", exist_ok=True)
         if os.path.exists(f"./models/{payload.save_as}"):
             shutil.rmtree(f"./models/{payload.save_as}")
 
