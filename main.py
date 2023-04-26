@@ -8,7 +8,7 @@ import numpy as np
 from sentence_transformers.losses import CosineSimilarityLoss
 from setfit import SetFitModel, SetFitTrainer, sample_dataset
 from huggingface_hub import login as huggingface_login
-from huggingface_hub import HfApi, hf_hub_download
+from huggingface_hub import HfApi, hf_hub_download, ModelFilter
 from huggingface_hub.utils import HfHubHTTPError, RepositoryNotFoundError
 import os
 import shutil
@@ -51,7 +51,7 @@ app = FastAPI(
     title="few-shot-classification-api",
     description="Few-shot classification with SetFit. \n"
                 "Built with love by [NLRC 510](https://www.510.global/). "
-                "See [the project on GitHub](https://github.com/rodekruis/text-generation-app).",
+                "See [the project on GitHub](https://github.com/rodekruis/few-shot-classification-api).",
     version="0.0.1",
     license_info={
         "name": "AGPL-3.0 license",
@@ -134,14 +134,13 @@ async def train_model(payload: TrainPayload):
         repo_id=model_path,
         repo_type="model",
     )
-
+    shutil.rmtree(model_path)
     return output
 
 
 @app.post("/classify")
 async def classify_text(payload: ClassifyPayload):
     output = {"model": payload.model_name}
-    organization = os.getenv('ORGANIZATION')
     model_path = os.path.join(organization, payload.model_name).replace('\\', '/')
     shutil.rmtree(model_path)
     try:
@@ -167,13 +166,23 @@ async def classify_text(payload: ClassifyPayload):
     return output
 
 
-# @app.get("/models")
-# async def get_models():
-#     container = os.getenv('CONTAINER')
-#     organization = os.getenv('ORGANIZATION')
-#     models = list_blobs(container, organization)
-#     models = [model.replace(f"{directory}/", "") for model in models]
-#     return {"models": models}
+@app.get("/models")
+async def get_models():
+    models = huggingface_client.list_models(
+        filter=ModelFilter(
+            task="text-classification",
+            author=organization
+        )
+    )
+    models_list = []
+    for model in models:
+        print(model)
+        models_list.append({
+            'modelId': model.modelId.replace(f"{organization}/", ""),
+            'lastModified': model.lastModified,
+            'tags': model.tags
+        })
+    return {"models": models_list}
 
 
 if __name__ == "__main__":
