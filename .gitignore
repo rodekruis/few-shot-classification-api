@@ -1,5 +1,6 @@
 test*.py
 .env
 models/*
+test/*
 out/*
 __pycache__/*

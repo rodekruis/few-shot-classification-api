@@ -13,6 +13,7 @@ torch = "*"
 azure-storage-blob = "*"
 python-dotenv = "*"
 setfit = "*"
+huggingface-hub = "*"
 
 [dev-packages]
 
