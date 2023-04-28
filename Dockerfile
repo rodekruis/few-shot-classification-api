@@ -3,15 +3,12 @@ FROM python:3.9-slim-bullseye
 
 # copy files to the /app folder in the container
 COPY ./main.py /app/main.py
-COPY ./Pipfile /app/Pipfile
-COPY ./Pipfile.lock /app/Pipfile.lock
 
 # set the working directory in the container to be /app
 WORKDIR /app
 
-# install the packages from the Pipfile in the container
-RUN pip install pipenv
-RUN pipenv install --system --deploy --ignore-pipfile
+# install the needed packages
+RUN pip install -r requirements.txt
 
 # expose the port that uvicorn will run the app on
 ENV PORT=8000
