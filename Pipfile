@@ -7,15 +7,14 @@ name = "pypi"
 uvicorn = "*"
 fastapi = "*"
 optuna = "*"
-datasets = "*"
-transformers = "*"
+datasets = "2.11.0"
+transformers = "4.28.1"
 torch = "*"
-azure-storage-blob = "*"
-python-dotenv = "*"
-setfit = "*"
-huggingface-hub = "*"
+python-dotenv = "0.19.2"
+setfit = "0.7.0"
+huggingface-hub = "0.14.1"
 
 [dev-packages]
 
 [requires]
-python_version = "3.8"
+python_version = "3.9"

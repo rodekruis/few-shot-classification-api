@@ -3,9 +3,7 @@ from typing import Union
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import json
-from datasets import Dataset, load_dataset
-import numpy as np
-from sentence_transformers.losses import CosineSimilarityLoss
+import requests
 from setfit import SetFitModel, SetFitTrainer, sample_dataset
 from huggingface_hub import login as huggingface_login
 from huggingface_hub import HfApi, hf_hub_download, ModelFilter
@@ -16,7 +14,9 @@ from dotenv import load_dotenv
 from enum import Enum
 load_dotenv()
 organization = os.getenv('ORGANIZATION')
+trainer_url = os.getenv('TRAINER_URL')
 base_model = os.getenv('BASE_MODEL')
+admin_key = os.getenv('ADMIN_KEY')
 huggingface_login(token=os.getenv('HUGGINGFACE_TOKEN'))
 huggingface_client = HfApi()
 
@@ -27,14 +27,14 @@ class Visibility(str, Enum):
 
 
 class TrainPayload(BaseModel):
-    texts: list
-    labels: list
+    texts: Union[list, str]
+    labels: Union[list, str]
     model_name: str
-    model_visibility: Union[Visibility, None] = Visibility.public
+    model_visibility: Visibility
     retrain_model: Union[bool, None] = False
-    texts_eval: Union[list, None] = None
-    labels_eval: Union[list, None] = None
-    multi_label: Union[bool, None] = True
+    # texts_eval: Union[list, None] = None
+    # labels_eval: Union[list, None] = None
+    # multi_label: Union[bool, None] = True
 
 
 class ClassifyPayload(BaseModel):
@@ -43,13 +43,18 @@ class ClassifyPayload(BaseModel):
     multi_label: Union[bool, None] = True
 
 
+class DeleteModelPayload(BaseModel):
+    model_name: str
+    key: str
+
+
 # load environment variables
 port = os.environ["PORT"]
 
 # initialize FastAPI
 app = FastAPI(
     title="few-shot-classification-api",
-    description="Few-shot classification with SetFit. \n"
+    description="Few-shot text classification with SetFit. \n"
                 "Built with love by [NLRC 510](https://www.510.global/). "
                 "See [the project on GitHub](https://github.com/rodekruis/few-shot-classification-api).",
     version="0.0.1",
@@ -67,82 +72,47 @@ def index():
 
 @app.post("/train")
 async def train_model(payload: TrainPayload):
-    output = {"model": payload.model_name}
-    model_path = os.path.join(organization, payload.model_name).replace('\\', '/')
+    output = {
+        "model_name": payload.model_name,
+        "model_url": f"https://huggingface.co/{organization}/{payload.model_name}"
+    }
 
-    # Define training and evaluation set
-    if len(payload.texts) != len(payload.labels):
-        raise HTTPException(status_code=400, detail="number of texts and labels must be the same")
-    texts = np.asarray(payload.texts)
-    unique_labels = list(set(payload.labels))
-    unique_labels.sort()
-    labels = np.asarray([unique_labels.index(label) for label in payload.labels])
-    train_dataset = Dataset.from_dict({'text': texts, 'label': labels})
-
-    if payload.texts_eval:
-        if len(payload.texts_eval) != len(payload.labels_eval):
-            raise HTTPException(status_code=400, detail="number of texts_eval and labels_eval must be the same")
-        texts_eval = np.asarray(payload.texts_eval)
-        unique_labels_eval = list(set(payload.labels_eval))
-        unique_labels_eval.sort()
-        if unique_labels_eval != unique_labels:
-            raise HTTPException(status_code=400, detail="labels_eval does not contain the same unique values as labels")
-        labels_eval = np.asarray([unique_labels.index(label) for label in payload.labels_eval])
-        eval_dataset = Dataset.from_dict({'text': texts_eval, 'label': labels_eval})
+    if type(payload.texts) == str:
+        texts = payload.texts.split(";")
+    elif type(payload.texts) == list:
+        texts = payload.texts
     else:
-        eval_dataset = train_dataset
-
-    # Create model and train
-    if not payload.retrain_model:
-        model = SetFitModel.from_pretrained(base_model)
+        raise HTTPException(status_code=400, detail="texts must be a list or a string with semicolon-separated items")
+    if type(payload.labels) == str:
+        labels = payload.labels.split(";")
+    elif type(payload.labels) == list:
+        labels = payload.labels
     else:
-        try:
-            model = SetFitModel.from_pretrained(model_path)
-        except RepositoryNotFoundError:
-            raise HTTPException(status_code=404, detail=f"model {payload.model_name} not found.")
-    trainer = SetFitTrainer(
-        model=model,
-        train_dataset=train_dataset,
-        eval_dataset=eval_dataset,
-        loss_class=CosineSimilarityLoss,
-        metric="accuracy",
-        batch_size=16,
-        num_iterations=20,  # The number of text pairs to generate for contrastive learning
-    )
-    trainer.train()
-
-    if payload.texts_eval:
-        metrics = trainer.evaluate()
-        output['evaluation'] = metrics
-
-    # save model
-    is_private = payload.model_visibility == Visibility.private
-    try:
-        huggingface_client.create_repo(repo_id=model_path, private=is_private)
-    except HfHubHTTPError:
-        pass
-    trainer.push_to_hub(model_path)
-
-    # save label dict
-    label_dict = {v: k for v, k in enumerate(unique_labels)}
-    os.makedirs(model_path, exist_ok=True)
-    with open(f"{model_path}/label_dict.json", "w") as outfile:
-        json.dump(label_dict, outfile)
-    huggingface_client.upload_file(
-        path_or_fileobj=f"{model_path}/label_dict.json",
-        path_in_repo="label_dict.json",
-        repo_id=model_path,
-        repo_type="model",
-    )
-    shutil.rmtree(model_path)
-    return output
+        raise HTTPException(status_code=400, detail="labels must be a list or a string with semicolon-separated items")
+    if len(texts) != len(labels):
+        raise HTTPException(status_code=400, detail=f"number of texts and labels must be the same"
+                                                    f" (received {len(texts)} texts and {len(labels)} labels)")
+    texts = ";".join(texts)
+    labels = ";".join(labels)
+    payload = {
+        'texts': texts,
+        'labels': labels,
+        'model_visibility': payload.model_visibility,
+        'model_name': payload.model_name
+    }
+    response = requests.post(trainer_url, json=payload)
+    if response.status_code == 202:
+        return output
+    else:
+        raise HTTPException(status_code=response.status_code, detail="training failed, check the logs")
 
 
 @app.post("/classify")
 async def classify_text(payload: ClassifyPayload):
-    output = {"model": payload.model_name}
+    output = {"model_name": payload.model_name}
     model_path = os.path.join(organization, payload.model_name).replace('\\', '/')
-    shutil.rmtree(model_path)
+    if os.path.exists(model_path):
+        shutil.rmtree(model_path)
     try:
         # load model and run inference
         model = SetFitModel.from_pretrained(model_path)
@@ -166,7 +136,7 @@ async def classify_text(payload: ClassifyPayload):
     return output
 
 
-@app.get("/models")
+@app.get("/list_models")
 async def get_models():
     models = huggingface_client.list_models(
         filter=ModelFilter(
@@ -176,7 +146,6 @@ async def get_models():
     )
     models_list = []
     for model in models:
-        print(model)
         models_list.append({
             'modelId': model.modelId.replace(f"{organization}/", ""),
             'lastModified': model.lastModified,
@@ -185,5 +154,16 @@ async def get_models():
     return {"models": models_list}
 
 
+@app.post("/delete_model")
+async def get_models(payload: DeleteModelPayload):
+    if payload.key != admin_key:
+        HTTPException(status_code=401, detail="unauthorized")
+    else:
+        huggingface_client.delete_repo(
+            repo_id=f"{organization}/{payload.model_name}"
+        )
+        return {"model deleted": payload.model_name}
+
+
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+    uvicorn.run("main:app", host="0.0.0.0", port=int(port), reload=True)
