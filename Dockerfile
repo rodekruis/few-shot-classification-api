@@ -3,6 +3,7 @@ FROM python:3.9-slim-bullseye
 
 # copy files to the /app folder in the container
 COPY ./main.py /app/main.py
+COPY ./requirements.txt /app/requirements.txt
 
 # set the working directory in the container to be /app
 WORKDIR /app
