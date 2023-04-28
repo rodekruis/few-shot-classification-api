@@ -19,3 +19,5 @@ huggingface-hub==0.14.1
 datasets==2.11.0
 transformers==4.28.1
 setfit==0.7.0
+fastapi==0.95.1
+uvicorn==0.20.0

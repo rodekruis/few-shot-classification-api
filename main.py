@@ -1,5 +1,6 @@
 import uvicorn
 from typing import Union
+from fastapi.responses import RedirectResponse
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import json
@@ -66,8 +67,8 @@ app = FastAPI(
 
 
 @app.get("/")
-def index():
-    return {"data": "Welcome to few-shot-classification-api!"}
+async def docs_redirect():
+    return RedirectResponse(url='/docs')
 
 
 @app.post("/train")
