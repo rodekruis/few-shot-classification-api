@@ -14,6 +14,9 @@ import shutil
 from dotenv import load_dotenv
 from enum import Enum
 load_dotenv()
+
+# load environment variables
+port = os.environ["PORT"]
 organization = os.getenv('ORGANIZATION')
 trainer_url = os.getenv('TRAINER_URL')
 base_model = os.getenv('BASE_MODEL')
@@ -49,20 +52,39 @@ class DeleteModelPayload(BaseModel):
     key: str
 
 
-# load environment variables
-port = os.environ["PORT"]
+tags_metadata = [
+    {
+        "name": "train",
+        "description": "Create a new model and train it with some examples",
+        "externalDocs": {
+            "description": "More info",
+            "url": "TBI",
+        },
+    },
+    {
+        "name": "classify",
+        "description": "Use an existing model to classify some text(s)",
+    },
+]
 
 # initialize FastAPI
 app = FastAPI(
     title="few-shot-classification-api",
-    description="Few-shot text classification with SetFit. \n"
-                "Built with love by [NLRC 510](https://www.510.global/). "
-                "See [the project on GitHub](https://github.com/rodekruis/few-shot-classification-api).",
+    description="""
+    Create and use your own text classification model, starting with only a few examples.
+    
+    Based on [SetFit](https://arxiv.org/abs/2209.11055) and [Transformers](https://huggingface.co/docs/transformers/index).
+    
+    Built with love by [NLRC 510](https://www.510.global/). See [the project on GitHub](https://github.com/rodekruis/few-shot-classification-api).
+    
+    All models are hosted at [huggingface.co/rodekruis](https://huggingface.co/rodekruis).
+    """,
     version="0.0.1",
     license_info={
         "name": "AGPL-3.0 license",
         "url": "https://www.gnu.org/licenses/agpl-3.0.en.html",
     },
+    openapi_tags=tags_metadata
 )
 
 
@@ -71,7 +93,7 @@ async def docs_redirect():
     return RedirectResponse(url='/docs')
 
 
-@app.post("/train")
+@app.post("/train", tags=["train"])
 async def train_model(payload: TrainPayload):
     output = {
         "model_name": payload.model_name,
@@ -108,7 +130,7 @@ async def train_model(payload: TrainPayload):
         raise HTTPException(status_code=response.status_code, detail="training failed, check the logs")
 
 
-@app.post("/classify")
+@app.post("/classify", tags=["classify"])
 async def classify_text(payload: ClassifyPayload):
     output = {"model_name": payload.model_name}
     model_path = os.path.join(organization, payload.model_name).replace('\\', '/')
@@ -138,7 +160,7 @@ async def classify_text(payload: ClassifyPayload):
 
 
 @app.get("/list_models")
-async def get_models():
+async def list_models():
     models = huggingface_client.list_models(
         filter=ModelFilter(
             task="text-classification",
@@ -156,7 +178,7 @@ async def get_models():
 
 
 @app.post("/delete_model")
-async def get_models(payload: DeleteModelPayload):
+async def delete_model(payload: DeleteModelPayload):
     if payload.key != admin_key:
         HTTPException(status_code=401, detail="unauthorized")
     else:
