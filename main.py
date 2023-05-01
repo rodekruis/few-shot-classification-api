@@ -20,7 +20,8 @@ port = os.environ["PORT"]
 organization = os.getenv('ORGANIZATION')
 trainer_url = os.getenv('TRAINER_URL')
 base_model = os.getenv('BASE_MODEL')
-admin_key = os.getenv('ADMIN_KEY')
+admin_key = str(os.getenv('ADMIN_KEY')).strip()
+user_key = str(os.getenv('USER_KEY')).strip()
 huggingface_login(token=os.getenv('HUGGINGFACE_TOKEN'))
 huggingface_client = HfApi()
 
@@ -31,25 +32,27 @@ class Visibility(str, Enum):
 
 
 class TrainPayload(BaseModel):
+    key: Union[str, None]
     texts: Union[list, str]
     labels: Union[list, str]
     model_name: str
     model_visibility: Visibility
-    retrain_model: Union[bool, None] = False
+    # retrain_model: Union[bool, None] = False
     # texts_eval: Union[list, None] = None
     # labels_eval: Union[list, None] = None
     # multi_label: Union[bool, None] = True
 
 
 class ClassifyPayload(BaseModel):
+    key: Union[str, None]
     texts: list
     model_name: str
     multi_label: Union[bool, None] = True
 
 
 class DeleteModelPayload(BaseModel):
+    key: Union[str, None]
     model_name: str
-    key: str
 
 
 tags_metadata = [
@@ -95,6 +98,9 @@ async def docs_redirect():
 
 @app.post("/train", tags=["train"])
 async def train_model(payload: TrainPayload):
+    key = str(payload.key).strip()
+    if key != admin_key and key != user_key:
+        raise HTTPException(status_code=401, detail="unauthorized")
     output = {
         "model_name": payload.model_name,
         "model_url": f"https://huggingface.co/{organization}/{payload.model_name}"
@@ -132,6 +138,9 @@ async def train_model(payload: TrainPayload):
 
 @app.post("/classify", tags=["classify"])
 async def classify_text(payload: ClassifyPayload):
+    key = str(payload.key).strip()
+    if key != admin_key and key != user_key:
+        raise HTTPException(status_code=401, detail="unauthorized")
     output = {"model_name": payload.model_name}
     model_path = os.path.join(organization, payload.model_name).replace('\\', '/')
     if os.path.exists(model_path):
@@ -179,13 +188,13 @@ async def list_models():
 
 @app.post("/delete_model")
 async def delete_model(payload: DeleteModelPayload):
-    if payload.key != admin_key:
-        HTTPException(status_code=401, detail="unauthorized")
-    else:
-        huggingface_client.delete_repo(
-            repo_id=f"{organization}/{payload.model_name}"
-        )
-        return {"model deleted": payload.model_name}
+    key = str(payload.key).strip()
+    if key != admin_key:
+        raise HTTPException(status_code=401, detail="unauthorized")
+    huggingface_client.delete_repo(
+        repo_id=f"{organization}/{payload.model_name}"
+    )
+    return {"model deleted": payload.model_name}
 
 
 if __name__ == "__main__":
