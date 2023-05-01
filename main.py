@@ -58,7 +58,7 @@ tags_metadata = [
         "description": "Create a new model and train it with some examples",
         "externalDocs": {
             "description": "More info",
-            "url": "TBI",
+            "url": "https://few-shot-classification-api.readthedocs.io",
         },
     },
     {
@@ -66,19 +66,19 @@ tags_metadata = [
         "description": "Use an existing model to classify some text(s)",
     },
 ]
+description = """
+Create and use your own text classification model, starting with only a few examples.
+
+Based on [SetFit](https://arxiv.org/abs/2209.11055) and [Transformers](https://huggingface.co/docs/transformers/index).
+All models are hosted at [huggingface.co/rodekruis](https://huggingface.co/rodekruis).
+
+Built with love by [NLRC 510](https://www.510.global/). See [the project on GitHub](https://github.com/rodekruis/few-shot-classification-api).
+"""
 
 # initialize FastAPI
 app = FastAPI(
     title="few-shot-classification-api",
-    description="""
-    Create and use your own text classification model, starting with only a few examples.
-    
-    Based on [SetFit](https://arxiv.org/abs/2209.11055) and [Transformers](https://huggingface.co/docs/transformers/index).
-    
-    Built with love by [NLRC 510](https://www.510.global/). See [the project on GitHub](https://github.com/rodekruis/few-shot-classification-api).
-    
-    All models are hosted at [huggingface.co/rodekruis](https://huggingface.co/rodekruis).
-    """,
+    description=description,
     version="0.0.1",
     license_info={
         "name": "AGPL-3.0 license",
