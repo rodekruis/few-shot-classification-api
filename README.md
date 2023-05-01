@@ -8,7 +8,7 @@ The API is publicly accessible at [few-shot-classification-api.azurewebsites.net
 
 ## Description
 
-Synopsis: a [dockerized](https://www.docker.com/) [python](https://www.python.org/) API that removes personally identifiable information (PII) from text.
+Synopsis: a [dockerized](https://www.docker.com/) [python](https://www.python.org/) API that orchestrates text classification models.
 
 Workflow: 
 
