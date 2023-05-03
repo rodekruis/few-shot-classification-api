@@ -6,17 +6,28 @@ All models are hosted at [huggingface.co/rodekruis](https://huggingface.co/rodek
 
 The API is publicly accessible at [few-shot-classification-api.azurewebsites.net](https://few-shot-classification-api.azurewebsites.net/docs).
 
-## Description
+## Prerequisites
 
-Synopsis: a [dockerized](https://www.docker.com/) [python](https://www.python.org/) API that orchestrates text classification models.
+* A user-level or admin-level API key: see BitWarden > Servers or ask Jacopo.
+* Some examples of what you want to classify.
 
-Workflow: 
+N.B.: the examples must be formatted as a semicolon-separated string (or a [Python list](https://www.w3schools.com/python/python_lists.asp)) of **texts** and corresponding **labels**. For example:
+* texts = "Cats make great pets; They hunt small rodents; The dog is a domesticated descendant of the wolf"
+* labels = "cat; cat; dog;"
 
-1. Create a new model and train it with N examples (N >= 10)
-2. wait M = 0.2 * N minutes, your model will appear [here](https://huggingface.co/rodekruis) when ready
-3. Classify a given piece of text with your model
+**Order matters**: in this example, the model will learn that the first text corresponds to the first label, 
+the second text to the second label, etc. If you provide texts and labels in random order, your model will not work as intended.
 
-## API Usage
+**Tips and tricks**:
+* Provide at least **10 examples per label**; the more examples you provide, the higher the accuracy of the model will be.
+* If providing examples as semicolon-separated string: remove semicolons from your texts and labels, to ensure that they are correctly parsed
+
+## Usage
+
+1. Create and train a new model using ``/train``.
+2. Wait about 0.2 minutes per example provided, where one example is one text-label pair. Your model will appear at [huggingface.co/rodekruis](https://huggingface.co/rodekruis) when ready.
+3. Use your model to classify new text using ``/classify``
+4. \[OPTIONAL\] Delete your model using ``/delete_model`` (requires admin-level API key)
 
 See [the documentation](https://few-shot-classification-api.readthedocs.io/).
 

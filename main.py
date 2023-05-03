@@ -61,7 +61,7 @@ tags_metadata = [
         "description": "Create a new model and train it with some examples",
         "externalDocs": {
             "description": "More info",
-            "url": "https://few-shot-classification-api.readthedocs.io",
+            "url": "https://github.com/rodekruis/few-shot-classification-api#prerequisites",
         },
     },
     {
