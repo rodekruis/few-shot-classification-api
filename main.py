@@ -45,7 +45,7 @@ class TrainPayload(BaseModel):
 
 class ClassifyPayload(BaseModel):
     key: Union[str, None]
-    texts: list
+    texts: Union[list, str]
     model_name: str
     multi_label: Union[bool, None] = True
 
@@ -148,13 +148,20 @@ async def classify_text(payload: ClassifyPayload):
         raise HTTPException(status_code=401, detail="unauthorized")
     output = {"model_name": payload.model_name}
     model_path = os.path.join(organization, payload.model_name).replace('\\', '/')
+
+    if type(payload.texts) == str:
+        texts = payload.texts.split(";")
+    elif type(payload.texts) == list:
+        texts = payload.texts
+    else:
+        raise HTTPException(status_code=400, detail="texts must be a list or a string with semicolon-separated items")
+
     if os.path.exists(model_path):
         shutil.rmtree(model_path)
     try:
         # load model and run inference
         model = SetFitModel.from_pretrained(model_path)
-        texts_pred = list(payload.texts)
-        predictions = model(texts_pred).numpy()
+        predictions = model(texts).numpy()
         # download label names and convert predictions
         os.makedirs(model_path, exist_ok=True)
         hf_hub_download(
