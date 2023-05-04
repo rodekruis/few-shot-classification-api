@@ -112,15 +112,20 @@ async def train_model(payload: TrainPayload):
         texts = payload.texts
     else:
         raise HTTPException(status_code=400, detail="texts must be a list or a string with semicolon-separated items")
+    texts = [t.replace(';', '') for t in texts]  # remove semicolon
+
     if type(payload.labels) == str:
         labels = payload.labels.split(";")
     elif type(payload.labels) == list:
         labels = payload.labels
     else:
         raise HTTPException(status_code=400, detail="labels must be a list or a string with semicolon-separated items")
+    labels = [t.replace(';', '') for t in labels]  # remove semicolon
+
     if len(texts) != len(labels):
         raise HTTPException(status_code=400, detail=f"number of texts and labels must be the same"
                                                     f" (received {len(texts)} texts and {len(labels)} labels)")
+
     texts = ";".join(texts)
     labels = ";".join(labels)
     payload = {
