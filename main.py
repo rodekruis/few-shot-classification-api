@@ -173,7 +173,7 @@ async def classify_text(payload: ClassifyPayload):
         with open(os.path.join(model_path, "label_dict.json")) as infile:
             label_dict = json.load(infile)
             output["predictions"] = []
-            for text, prediction in zip(texts_pred, predictions):
+            for text, prediction in zip(texts, predictions):
                 output["predictions"].append({"text": text, "label": label_dict[str(prediction)]})
     except RepositoryNotFoundError:
         raise HTTPException(status_code=404, detail=f"model {payload.model_name} not found.")
