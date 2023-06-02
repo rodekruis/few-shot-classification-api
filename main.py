@@ -11,6 +11,7 @@ from huggingface_hub import HfApi, hf_hub_download, ModelFilter
 from huggingface_hub.utils import HfHubHTTPError, RepositoryNotFoundError
 import os
 import shutil
+import numpy as np
 from dotenv import load_dotenv
 from enum import Enum
 load_dotenv()
@@ -37,17 +38,13 @@ class TrainPayload(BaseModel):
     labels: Union[list, str]
     model_name: str
     model_visibility: Visibility
-    # retrain_model: Union[bool, None] = False
-    # texts_eval: Union[list, None] = None
-    # labels_eval: Union[list, None] = None
-    # multi_label: Union[bool, None] = True
 
 
 class ClassifyPayload(BaseModel):
     key: Union[str, None]
     texts: Union[list, str]
     model_name: str
-    multi_label: Union[bool, None] = True
+    predict_proba: Union[bool, None] = False
 
 
 class DeleteModelPayload(BaseModel):
@@ -162,6 +159,10 @@ async def classify_text(payload: ClassifyPayload):
         # load model and run inference
         model = SetFitModel.from_pretrained(model_path)
         predictions = model(texts).numpy()
+        if payload.predict_proba:
+            predict_probabilities = model.predict_proba(texts).numpy()
+            max_probabilities = [max(predict_probabilities[ix]) for ix in range(predict_probabilities.shape[0])]
+
         # download label names and convert predictions
         os.makedirs(model_path, exist_ok=True)
         hf_hub_download(
@@ -173,8 +174,12 @@ async def classify_text(payload: ClassifyPayload):
         with open(os.path.join(model_path, "label_dict.json")) as infile:
             label_dict = json.load(infile)
             output["predictions"] = []
-            for text, prediction in zip(texts, predictions):
-                output["predictions"].append({"text": text, "label": label_dict[str(prediction)]})
+            if payload.predict_proba:
+                for text, prediction, proba in zip(texts, predictions, max_probabilities):
+                    output["predictions"].append({"text": text, "label": label_dict[str(prediction)], "probability": proba})
+            else:
+                for text, prediction in zip(texts, predictions):
+                    output["predictions"].append({"text": text, "label": label_dict[str(prediction)]})
     except RepositoryNotFoundError:
         raise HTTPException(status_code=404, detail=f"model {payload.model_name} not found.")
     return output
