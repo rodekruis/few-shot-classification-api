@@ -11,7 +11,8 @@ from huggingface_hub import HfApi, hf_hub_download, ModelFilter
 from huggingface_hub.utils import HfHubHTTPError, RepositoryNotFoundError
 import os
 import shutil
-import numpy as np
+import re
+from cleantext import clean
 from dotenv import load_dotenv
 from enum import Enum
 load_dotenv()
@@ -109,7 +110,9 @@ async def train_model(payload: TrainPayload):
         texts = payload.texts
     else:
         raise HTTPException(status_code=400, detail="texts must be a list or a string with semicolon-separated items")
-    texts = [t.replace(';', '') for t in texts]  # remove semicolon
+    texts = [re.sub(r'(!|\$|#|&|\"|\'|\(|\)|\||<|>|`|\\\|;)', "", t).strip() for t in texts]  # cleaning
+    texts = [clean(t, lower=False, no_line_breaks=True, no_emoji=True) for t in texts]
+    texts = [t[:500] for t in texts]  # 06-06-2023 training stops without error if text too long, to be investigated
 
     if type(payload.labels) == str:
         labels = payload.labels.split(";")
@@ -117,7 +120,9 @@ async def train_model(payload: TrainPayload):
         labels = payload.labels
     else:
         raise HTTPException(status_code=400, detail="labels must be a list or a string with semicolon-separated items")
-    labels = [t.replace(';', '') for t in labels]  # remove semicolon
+    labels = [re.sub(r'(!|\$|#|&|\"|\'|\(|\)|\||<|>|`|\\\|;)', "", t).strip() for t in labels]  # cleaning
+    labels = [clean(t, lower=False, no_line_breaks=True, no_emoji=True) for t in labels]
+    labels = [t[:500] for t in labels]
 
     if len(texts) != len(labels):
         raise HTTPException(status_code=400, detail=f"number of texts and labels must be the same"
