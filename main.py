@@ -165,7 +165,7 @@ async def train_model_from_dataset(payload: TrainFromDatasetPayload):
     try:
         df_data = pd.read_excel(payload.data)
     except HTTPError as err:
-        raise HTTPException(status_code=err.code, detail=str(err))
+        raise HTTPException(status_code=err.code, detail="cannot read dataset")
     if 'text' not in df_data.columns or 'label' not in df_data.columns:
         raise HTTPException(status_code=400, detail="data file must contain columns 'text' and 'label'")
 
