@@ -163,7 +163,7 @@ async def train_model_from_dataset(payload: TrainFromDatasetPayload):
     }
 
     try:
-        df_data = pd.read_csv(payload.data)
+        df_data = pd.read_excel(payload.data)
     except HTTPError as err:
         raise HTTPException(status_code=err.code, detail=str(err))
     if 'text' not in df_data.columns or 'label' not in df_data.columns:
