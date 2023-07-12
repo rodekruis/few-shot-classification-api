@@ -4,6 +4,7 @@ from fastapi.responses import RedirectResponse
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import json
+from urllib.error import HTTPError
 import requests
 from setfit import SetFitModel, SetFitTrainer, sample_dataset
 from huggingface_hub import login as huggingface_login
@@ -15,6 +16,7 @@ import re
 from cleantext import clean
 from dotenv import load_dotenv
 from enum import Enum
+import pandas as pd
 load_dotenv()
 
 # load environment variables
@@ -37,6 +39,13 @@ class TrainPayload(BaseModel):
     key: Union[str, None]
     texts: Union[list, str]
     labels: Union[list, str]
+    model_name: str
+    model_visibility: Visibility
+
+
+class TrainFromDatasetPayload(BaseModel):
+    key: Union[str, None]
+    data: str
     model_name: str
     model_visibility: Visibility
 
@@ -111,7 +120,7 @@ async def train_model(payload: TrainPayload):
     else:
         raise HTTPException(status_code=400, detail="texts must be a list or a string with semicolon-separated items")
     texts = [re.sub(r'(!|\$|#|&|\"|\'|\(|\)|\||<|>|`|\\\|;)', "", t).strip() for t in texts]  # cleaning
-    texts = [clean(t, lower=False, no_line_breaks=True, no_emoji=True) for t in texts]
+    texts = [clean(t, lower=False, no_line_breaks=True, no_urls=True, no_emoji=True) for t in texts]
     texts = [t[:500] for t in texts]  # 06-06-2023 training stops without error if text too long, to be investigated
 
     if type(payload.labels) == str:
@@ -120,8 +129,8 @@ async def train_model(payload: TrainPayload):
         labels = payload.labels
     else:
         raise HTTPException(status_code=400, detail="labels must be a list or a string with semicolon-separated items")
-    labels = [re.sub(r'(!|\$|#|&|\"|\'|\(|\)|\||<|>|`|\\\|;)', "", t).strip() for t in labels]  # cleaning
-    labels = [clean(t, lower=False, no_line_breaks=True, no_emoji=True) for t in labels]
+    labels = [re.sub(r'(!|\$|#|&|\"|\'|\(|\)|\||<|>|`|\\\|;)', " ", t).strip() for t in labels]  # cleaning
+    labels = [clean(t, lower=False, no_line_breaks=True, no_urls=True, no_emoji=True) for t in labels]
     labels = [t[:500] for t in labels]
 
     if len(texts) != len(labels):
@@ -133,6 +142,35 @@ async def train_model(payload: TrainPayload):
     payload = {
         'texts': texts,
         'labels': labels,
+        'model_visibility': payload.model_visibility,
+        'model_name': payload.model_name
+    }
+    response = requests.post(trainer_url, json=payload)
+    if response.status_code == 202:
+        return output
+    else:
+        raise HTTPException(status_code=response.status_code, detail="training failed, check the logs")
+
+
+@app.post("/train_from_dataset", tags=["train_from_dataset"])
+async def train_model_from_dataset(payload: TrainFromDatasetPayload):
+    key = str(payload.key).strip()
+    if key != admin_key and key != user_key:
+        raise HTTPException(status_code=401, detail="unauthorized")
+    output = {
+        "model_name": payload.model_name,
+        "model_url": f"https://huggingface.co/{organization}/{payload.model_name}"
+    }
+
+    try:
+        df_data = pd.read_csv(payload.data)
+    except HTTPError as err:
+        raise HTTPException(status_code=err.code, detail=str(err))
+    if 'text' not in df_data.columns or 'label' not in df_data.columns:
+        raise HTTPException(status_code=400, detail="data file must contain columns 'text' and 'label'")
+
+    payload = {
+        'data': payload.data,
         'model_visibility': payload.model_visibility,
         'model_name': payload.model_name
     }
