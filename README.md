@@ -31,7 +31,7 @@ the second text to the second label, etc. If you provide texts and labels in ran
 
 ## Models
 
-Sentence transformers ([all-mpnet-base-v2](https://huggingface.co/sentence-transformers/all-mpnet-base-v2)) fine-tuned using [SetFit](https://arxiv.org/abs/2209.11055).
+Sentence transformers ([intfloat/e5-base-v2](https://huggingface.co/intfloat/e5-base-v2)) fine-tuned using [SetFit](https://arxiv.org/abs/2209.11055).
 
 ## Setup
 
