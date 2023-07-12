@@ -152,8 +152,8 @@ async def train_model(payload: TrainPayload):
         raise HTTPException(status_code=response.status_code, detail="training failed, check the logs")
 
 
-@app.post("/train_from_dataset", tags=["train_from_dataset"])
-async def train_model_from_dataset(payload: TrainFromDatasetPayload):
+@app.post("/train_from_dataset", tags=["train"])
+async def train_model_using_data_from_excel_spreadsheet(payload: TrainFromDatasetPayload):
     key = str(payload.key).strip()
     if key != admin_key and key != user_key:
         raise HTTPException(status_code=401, detail="unauthorized")
