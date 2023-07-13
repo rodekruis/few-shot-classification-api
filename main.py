@@ -22,7 +22,8 @@ load_dotenv()
 # load environment variables
 port = os.environ["PORT"]
 organization = os.getenv('ORGANIZATION')
-trainer_url = os.getenv('TRAINER_URL')
+trainer_args_url = os.getenv('TRAINER_ARGS_URL')
+trainer_data_url = os.getenv('TRAINER_DATA_URL')
 base_model = os.getenv('BASE_MODEL')
 admin_key = str(os.getenv('ADMIN_KEY')).strip()
 user_key = str(os.getenv('USER_KEY')).strip()
@@ -145,7 +146,7 @@ async def train_model(payload: TrainPayload):
         'model_visibility': payload.model_visibility,
         'model_name': payload.model_name
     }
-    response = requests.post(trainer_url, json=payload)
+    response = requests.post(trainer_args_url, json=payload)
     if response.status_code == 202:
         return output
     else:
@@ -174,7 +175,7 @@ async def train_model_using_data_from_excel_spreadsheet(payload: TrainFromDatase
         'model_visibility': payload.model_visibility,
         'model_name': payload.model_name
     }
-    response = requests.post(trainer_url, json=payload)
+    response = requests.post(trainer_data_url, json=payload)
     if response.status_code == 202:
         return output
     else:
